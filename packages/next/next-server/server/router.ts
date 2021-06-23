@@ -122,7 +122,16 @@ export default class Router {
     // memoize page check calls so we don't duplicate checks for pages
     const pageChecks: { [name: string]: Promise<boolean> } = {}
     const memoizedPageChecker = async (p: string): Promise<boolean> => {
-      p = normalizeLocalePath(p, this.locales).pathname
+      const localeResult = normalizeLocalePath(p, this.locales)
+      p = localeResult.pathname
+
+      // if locale is in path and it's API request we 404
+      if (
+        localeResult.detectedLocale &&
+        (p === '/api' || p.startsWith('/api/'))
+      ) {
+        return false
+      }
 
       if (pageChecks[p]) {
         return pageChecks[p]
@@ -205,6 +214,7 @@ export default class Router {
             {
               type: 'route',
               name: 'page checker',
+              internal: true,
               requireBasePath: false,
               match: route('/:path*'),
               fn: async (checkerReq, checkerRes, params, parsedCheckerUrl) => {
@@ -268,8 +278,11 @@ export default class Router {
       const requireBasePath = testRoute.requireBasePath !== false
       const isCustomRoute = customRouteTypes.has(testRoute.type)
       const isPublicFolderCatchall = testRoute.name === 'public folder catchall'
+      const isPageCatchall =
+        testRoute.name === 'page checker' ||
+        testRoute.name === 'Catchall render'
       const keepBasePath = isCustomRoute || isPublicFolderCatchall
-      const keepLocale = isCustomRoute
+      const keepLocale = isCustomRoute || isPageCatchall
 
       const currentPathnameNoBasePath = replaceBasePath(
         this.basePath,

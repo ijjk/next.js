@@ -86,6 +86,10 @@ module.exports = {
         source: '/sitemap.xml',
         destination: '/api/hello',
       },
+      {
+        source: '/invalid-api-rewrite',
+        destination: '/en/api/hello',
+      },
     ]
   },
   async headers() {

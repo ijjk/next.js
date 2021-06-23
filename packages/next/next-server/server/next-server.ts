@@ -1005,6 +1005,7 @@ export default class Server {
 
         // next.js core assumes page path without trailing slash
         pathname = removePathTrailingSlash(pathname)
+        let hadLocale = false
 
         if (this.nextConfig.i18n) {
           const localePathResult = normalizeLocalePath(
@@ -1013,6 +1014,7 @@ export default class Server {
           )
 
           if (localePathResult.detectedLocale) {
+            hadLocale = true
             pathname = localePathResult.pathname
             parsedUrl.query.__nextLocale = localePathResult.detectedLocale
           }
@@ -1021,6 +1023,13 @@ export default class Server {
 
         if (pathname === '/api' || pathname.startsWith('/api/')) {
           delete query._nextBubbleNoFallback
+
+          if (hadLocale) {
+            await this.render404(req, res, parsedUrl)
+            return {
+              finished: true,
+            }
+          }
 
           const handled = await this.handleApiRequest(
             req as NextApiRequest,

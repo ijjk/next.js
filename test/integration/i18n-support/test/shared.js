@@ -37,7 +37,32 @@ async function addDefaultLocaleCookie(browser) {
 }
 
 export function runTests(ctx) {
-  it.only('should have domainLocales available on useRouter', async () => {
+  it('should only allow API routes without locale', async () => {
+    for (const locale of locales) {
+      const res = await fetchViaHTTP(
+        ctx.appPort,
+        `${ctx.basePath || ''}/${locale}/api/hello`
+      )
+      expect(res.status).toBe(404)
+    }
+
+    const res = await fetchViaHTTP(
+      ctx.appPort,
+      `${ctx.basePath || ''}/api/hello`
+    )
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ hello: true, query: {} })
+  })
+
+  it('should not allow invalid locale API rewrite', async () => {
+    const res = await fetchViaHTTP(
+      ctx.appPort,
+      `${ctx.basePath || ''}/invalid-api-rewrite`
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('should have domainLocales available on useRouter', async () => {
     const browser = await webdriver(ctx.appPort, `${ctx.basePath || '/'}`)
     expect(
       JSON.parse(await browser.elementByCss('#router-domain-locales').text())
