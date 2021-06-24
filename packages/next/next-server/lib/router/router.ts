@@ -169,6 +169,11 @@ export function delBasePath(path: string): string {
   return path
 }
 
+export function normalizeSlashes(path: string): string {
+  // removes repeated forward slashes e.g. //hello -> /hello
+  return path.replace(/\/[\/]{1,}/g, '/')
+}
+
 /**
  * Detects whether a given url is routable by the Next.js router (browser only).
  */
@@ -274,8 +279,9 @@ export function resolveHref(
 ): string {
   // we use a dummy base url for relative urls
   let base: URL
-  const urlAsString =
+  const urlAsString = normalizeSlashes(
     typeof href === 'string' ? href : formatWithValidation(href)
+  )
 
   try {
     base = new URL(

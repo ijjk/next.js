@@ -1,5 +1,6 @@
 /* eslint-env jest */
 import { join } from 'path'
+import fs from 'fs-extra'
 import webdriver from 'next-webdriver'
 import {
   nextBuild,
@@ -14,7 +15,7 @@ import {
 
 jest.setTimeout(60 * 1000)
 
-const appDir = join(__dirname, '../')
+const appDir = join(__dirname, '../app')
 const outdir = join(appDir, 'out')
 let appPort
 let app
@@ -28,64 +29,136 @@ const didNotReload = async (browser) => {
         `did not find window.errorLoad, current url: ${await browser.url()}`
       )
     }
-    await waitFor(750)
+    await waitFor(500)
   }
 }
 
-function runTests() {
+function runTests(isExport = false) {
   it('should handle double slashes correctly', async () => {
     const browser = await webdriver(appPort, '//google.com')
     await didNotReload(browser)
+    expect(await browser.eval('window.location.pathname')).toBe(
+      // the static server doesn't handle normalizing the repeated
+      // slashes like next start and doesn't get updated on client
+      // init since there is no query present
+      isExport ? '//google.com' : '/google.com'
+    )
   })
 
   it('should handle double slashes correctly with query', async () => {
     const browser = await webdriver(appPort, '//google.com?h=1')
     await didNotReload(browser)
+    expect(await browser.eval('window.location.pathname')).toBe('/google.com')
+    expect(await browser.eval('window.location.search')).toBe('?h=1')
   })
 
   it('should handle double slashes correctly with hash', async () => {
     const browser = await webdriver(appPort, '//google.com#hello')
     await didNotReload(browser)
+    expect(await browser.eval('window.location.pathname')).toBe(
+      // the static server doesn't handle normalizing the repeated
+      // slashes like next start and doesn't get updated on client
+      // init since there is no query present
+      isExport ? '//google.com' : '/google.com'
+    )
+    expect(await browser.eval('window.location.hash')).toBe('#hello')
   })
 
   it('should handle double slashes correctly with encoded', async () => {
     const browser = await webdriver(appPort, '/%2Fgoogle.com')
     await didNotReload(browser)
+    expect(await browser.eval('window.location.pathname')).toBe(
+      '/%2Fgoogle.com'
+    )
   })
 
   it('should handle double slashes correctly with encoded and query', async () => {
     const browser = await webdriver(appPort, '/%2Fgoogle.com?hello=1')
     await didNotReload(browser)
+    expect(await browser.eval('window.location.pathname')).toBe(
+      '/%2Fgoogle.com'
+    )
+    expect(await browser.eval('window.location.search')).toBe('?hello=1')
   })
 
   it('should handle double slashes correctly with encoded and hash', async () => {
     const browser = await webdriver(appPort, '/%2Fgoogle.com#hello')
     await didNotReload(browser)
+    expect(await browser.eval('window.location.pathname')).toBe(
+      '/%2Fgoogle.com'
+    )
+    expect(await browser.eval('window.location.hash')).toBe('#hello')
   })
 
-  // it('should handle slashes on router push with valid page', async () => {
-  //   const browser = await webdriver(appPort, '/')
+  it('should handle slashes in next/link correctly', async () => {
+    const browser = await webdriver(appPort, '/')
 
-  //   await browser.eval(`(function() {
-  //     window.beforeNav = true
-  //     window.next.router.push('/', '//google.com')
-  //   })()`)
+    for (const item of [
+      {
+        id: 'page-with-as-slashes',
+        page: 'another',
+        asPathname: '/google.com',
+        asQuery: {},
+        asHash: '',
+      },
+      {
+        id: 'href-with-slashes',
+        page: 'error',
+        asPathname: '/google.com',
+        asQuery: {},
+        asHash: '',
+      },
+      {
+        id: 'href-with-slashes-query',
+        page: 'error',
+        asPathname: '/google.com',
+        asQuery: { hello: '1' },
+        asHash: '',
+      },
+      {
+        id: 'href-with-slashes-hash',
+        page: 'error',
+        asPathname: '/google.com',
+        asQuery: {},
+        asHash: '#hello',
+      },
+    ]) {
+      const href = await browser
+        .elementByCss(`#${item.id}`)
+        .getAttribute('href')
 
-  //   await browser.waitForElementByCss('#another')
-  //   expect(await browser.eval('window.beforeNav')).toBe(true)
-  //   expect(await browser.eval('window.location.pathname')).toBe('/google.com')
-  // })
+      const parsed = new URL(href)
+      expect(parsed.pathname).toBe(item.asPathname)
+      expect(parsed.hash).toBe(item.asHash)
+      expect(Object.fromEntries(parsed.searchParams)).toEqual(item.asQuery)
+
+      await browser.elementByCss(`#${item.id}`).click()
+      await browser.waitForElementByCss(`#${item.page}`)
+      await browser.back()
+      await browser.waitForElementByCss('#index')
+    }
+  })
 }
 
 describe('404 handling', () => {
+  let nextOpts = {}
   beforeAll(async () => {
-    await nextBuild(appDir)
+    const hasLocalNext = await fs.exists(join(appDir, 'node_modules/next'))
+
+    if (hasLocalNext) {
+      nextOpts = {
+        nextBin: join(appDir, 'node_modules/next/dist/bin/next'),
+        cwd: appDir,
+      }
+      console.log('Using next options', nextOpts)
+    }
+    await nextBuild(appDir, [], nextOpts)
   })
 
   describe('next start', () => {
     beforeAll(async () => {
       appPort = await findPort()
-      app = await nextStart(appDir, appPort)
+      app = await nextStart(appDir, appPort, nextOpts)
     })
     afterAll(() => killApp(app))
 
@@ -94,12 +167,14 @@ describe('404 handling', () => {
 
   describe('next export', () => {
     beforeAll(async () => {
-      await nextExport(appDir, { outdir })
+      await nextExport(appDir, { outdir }, nextOpts)
       app = await startStaticServer(outdir, join(outdir, '404.html'))
       appPort = app.address().port
     })
-    afterAll(() => stopApp(app))
+    afterAll(() => {
+      stopApp(app)
+    })
 
-    runTests()
+    runTests(true)
   })
 })

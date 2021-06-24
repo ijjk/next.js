@@ -293,6 +293,16 @@ export default class Server {
     res: ServerResponse,
     parsedUrl?: UrlWithParsedQuery
   ): Promise<void> {
+    // redirect away repeated slashes
+    if (req.url?.match(/\/\//)) {
+      const cleanUrl = req.url.replace(/\/[\/]{1,}/g, '/')
+      res.setHeader('Location', cleanUrl)
+      res.setHeader('refresh', `0;url=${cleanUrl}`)
+      res.statusCode = 308
+      res.end('')
+      return
+    }
+
     setLazyProp({ req: req as any }, 'cookies', getCookieParser(req))
 
     // Parse url if parsedUrl not provided
