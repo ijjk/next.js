@@ -138,6 +138,58 @@ function runTests(isExport = false) {
       await browser.waitForElementByCss('#index')
     }
   })
+
+  it('should handle slashes in router push correctly', async () => {
+    const browser = await webdriver(appPort, '/')
+
+    for (const item of [
+      {
+        page: 'another',
+        href: '/another',
+        as: '//google.com',
+        asPathname: '/google.com',
+        asQuery: '',
+        asHash: '',
+      },
+      {
+        page: 'error',
+        href: '//google.com',
+        asPathname: '/google.com',
+        asQuery: '',
+        asHash: '',
+      },
+      {
+        page: 'error',
+        href: '//google.com?hello=1',
+        asPathname: '/google.com',
+        asQuery: '?hello=1',
+        asHash: '',
+      },
+      {
+        page: 'error',
+        href: '//google.com#hello',
+        asPathname: '/google.com',
+        asQuery: '',
+        asHash: '#hello',
+      },
+    ]) {
+      await browser.eval(`(function() {
+        window.next.router.push("${item.href}"${
+        item.as ? `, "${item.as}"` : ''
+      })
+      })()`)
+
+      await browser.waitForElementByCss(`#${item.page}`)
+      expect(await browser.eval('window.location.pathname')).toBe(
+        item.asPathname
+      )
+      expect(await browser.eval('window.location.search')).toBe(item.asQuery)
+      expect(await browser.eval('window.location.hash')).toBe(item.asHash)
+
+      await browser.back()
+      await browser.waitForElementByCss('#index')
+    }
+  })
 }
 
 describe('404 handling', () => {
