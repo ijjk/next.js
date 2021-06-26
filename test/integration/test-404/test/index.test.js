@@ -33,7 +33,7 @@ const didNotReload = async (browser) => {
   }
 }
 
-function runTests(isExport = false) {
+function runTests(isExport = false, isPages404 = false) {
   it('should handle double slashes correctly', async () => {
     const browser = await webdriver(appPort, '//google.com')
     await didNotReload(browser)
@@ -48,7 +48,11 @@ function runTests(isExport = false) {
   it('should handle double slashes correctly with query', async () => {
     const browser = await webdriver(appPort, '//google.com?h=1')
     await didNotReload(browser)
-    expect(await browser.eval('window.location.pathname')).toBe('/google.com')
+    expect(await browser.eval('window.location.pathname')).toBe(
+      // we don't update the query on the client for pages/404
+      // and next export doesn't apply the repeated slash redirect
+      isPages404 && isExport ? '//google.com' : '/google.com'
+    )
     expect(await browser.eval('window.location.search')).toBe('?h=1')
   })
 
@@ -204,29 +208,63 @@ describe('404 handling', () => {
       }
       console.log('Using next options', nextOpts)
     }
-    await nextBuild(appDir, [], nextOpts)
   })
 
-  describe('next start', () => {
-    beforeAll(async () => {
-      appPort = await findPort()
-      app = await nextStart(appDir, appPort, nextOpts)
-    })
-    afterAll(() => killApp(app))
+  const startAndExport = (isPages404) => {
+    describe('next start', () => {
+      beforeAll(async () => {
+        appPort = await findPort()
+        app = await nextStart(appDir, appPort, nextOpts)
+      })
+      afterAll(() => killApp(app))
 
-    runTests()
+      runTests(false, isPages404)
+    })
+
+    describe('next export', () => {
+      beforeAll(async () => {
+        await nextExport(appDir, { outdir }, nextOpts)
+        app = await startStaticServer(outdir, join(outdir, '404.html'))
+        appPort = app.address().port
+      })
+      afterAll(() => {
+        stopApp(app)
+      })
+
+      runTests(true, isPages404)
+    })
+  }
+
+  describe('custom _error', () => {
+    beforeAll(async () => {
+      await nextBuild(appDir, [], nextOpts)
+    })
+
+    startAndExport(false)
   })
 
-  describe('next export', () => {
+  describe('pages/404', () => {
+    const pagesErr = join(appDir, 'pages/_error.js')
+    const pages404 = join(appDir, 'pages/404.js')
+
     beforeAll(async () => {
-      await nextExport(appDir, { outdir }, nextOpts)
-      app = await startStaticServer(outdir, join(outdir, '404.html'))
-      appPort = app.address().port
-    })
-    afterAll(() => {
-      stopApp(app)
+      await fs.move(pagesErr, pagesErr + '.bak')
+      await fs.writeFile(
+        pages404,
+        `
+          if (typeof window !== 'undefined') {
+            window.errorLoad = true
+          }
+          export default function Page() {
+            return <p id='error'>custom 404</p>
+          }
+        `
+      )
+      await nextBuild(appDir, [], nextOpts)
+      await fs.move(pagesErr + '.bak', pagesErr)
+      await fs.remove(pages404)
     })
 
-    runTests(true)
+    startAndExport(true)
   })
 })
