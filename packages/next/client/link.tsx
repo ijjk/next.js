@@ -9,6 +9,7 @@ import {
   PrefetchOptions,
   resolveHref,
 } from '../shared/lib/router/router'
+import { formatUrl } from '../shared/lib/router/utils/format-url'
 import { useRouter } from './router'
 import { useIntersection } from './use-intersection'
 
@@ -214,11 +215,26 @@ function Link(props: React.PropsWithChildren<LinkProps>) {
   const router = useRouter()
 
   const { href, as } = React.useMemo(() => {
-    const [resolvedHref, resolvedAs] = resolveHref(router, props.href, true)
-    return {
-      href: resolvedHref,
-      as: props.as ? resolveHref(router, props.as) : resolvedAs || resolvedHref,
+    let resolvedHref
+    let resolvedAs
+    try {
+      const result = resolveHref(router, props.href, true)
+      resolvedHref = result[0]
+      resolvedAs =
+        (props.as ? resolveHref(router, props.as) : resolvedAs) || resolvedHref
+    } catch (err) {
+      console.error(err)
+
+      const hrefString =
+        typeof props.href !== 'string' ? formatUrl(props.href) : props.href
+
+      resolvedHref = hrefString
+      resolvedAs =
+        (props.as && typeof props.as !== 'string'
+          ? formatUrl(props.as)
+          : props.as) || hrefString
     }
+    return { href: resolvedHref, as: resolvedAs }
   }, [router, props.href, props.as])
 
   let { children, replace, shallow, scroll, locale } = props

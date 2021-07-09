@@ -293,6 +293,13 @@ export default class Server {
     res: ServerResponse,
     parsedUrl?: UrlWithParsedQuery
   ): Promise<void> {
+    // repeated slashes and backslashes in the URL are considered
+    // a bad request and will never match a Next.js page/file
+    if (req.url?.match(/(\/\/|\\)/)) {
+      res.statusCode = 400
+      return this.renderError(null, req, res, '/_error', {})
+    }
+
     setLazyProp({ req: req as any }, 'cookies', getCookieParser(req))
 
     // Parse url if parsedUrl not provided

@@ -277,6 +277,24 @@ export function resolveHref(
   const urlAsString =
     typeof href === 'string' ? href : formatWithValidation(href)
 
+  // repeated slashes and backslashes in the URL are considered
+  // a bad request and will never match a Next.js page/file
+  const urlProtoMatch = urlAsString.match(/^[a-zA-Z]{1,}:\/\//)
+  const urlAsStringNoProto = urlProtoMatch
+    ? urlAsString.substr(urlProtoMatch[0].length)
+    : urlAsString
+
+  if (urlAsStringNoProto.match(/(\/\/|\\)/)) {
+    throw new Error(
+      `Invalid href passed to next/router: ${urlAsString}, repeated forward-slashes (//) or backslashes \\ are not valid in the href`
+    )
+  }
+
+  // Return because it cannot be routed by the Next.js router
+  if (!isLocalURL(urlAsString)) {
+    return (resolveAs ? [urlAsString] : urlAsString) as string
+  }
+
   try {
     base = new URL(
       urlAsString.startsWith('#') ? router.asPath : router.pathname,
@@ -286,10 +304,7 @@ export function resolveHref(
     // fallback to / for invalid asPath values e.g. //
     base = new URL('/', 'http://n')
   }
-  // Return because it cannot be routed by the Next.js router
-  if (!isLocalURL(urlAsString)) {
-    return (resolveAs ? [urlAsString] : urlAsString) as string
-  }
+
   try {
     const finalUrl = new URL(urlAsString, base)
     finalUrl.pathname = normalizePathTrailingSlash(finalUrl.pathname)
