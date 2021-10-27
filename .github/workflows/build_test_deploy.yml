@@ -436,6 +436,9 @@ jobs:
         with:
           path: ./*
           key: ${{ github.sha }}
+
+      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+
       - uses: actions/download-artifact@v2
         with:
           name: next-swc-binaries
