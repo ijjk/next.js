@@ -5,6 +5,7 @@ import type { Params } from '../../../../server/router'
 import type { RouteHas } from '../../../../lib/load-custom-routes'
 import { compile, pathToRegexp } from 'next/dist/compiled/path-to-regexp'
 import { parseUrl } from './parse-url'
+import escapeStringRegexp from 'next/dist/compiled/escape-string-regexp'
 
 export function matchHas(
   req: IncomingMessage,
@@ -240,7 +241,7 @@ function getSafeParamName(paramName: string) {
 
 function escapeSegment(str: string, segmentName: string) {
   return str.replace(
-    new RegExp(`:${segmentName}`, 'g'),
+    new RegExp(`:${escapeStringRegexp(segmentName)}`, 'g'),
     `__ESC_COLON_${segmentName}`
   )
 }

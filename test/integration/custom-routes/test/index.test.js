@@ -39,6 +39,23 @@ let appPort
 let app
 
 const runTests = (isDev = false) => {
+  it('should escape segments correctly from query', async () => {
+    for (const { pathname, status, content } of [
+      { pathname: '/desktop/core/?.%5C', status: 308 },
+      { pathname: '/desktop/core/?%5C.%5C', status: 308 },
+      { pathname: '/desktop/core/?%5Cx%5C', status: 308 },
+    ]) {
+      const res = await fetchViaHTTP(appPort, pathname, undefined, {
+        redirect: 'manual',
+      })
+      expect(res.status).toBe(status)
+
+      if (content) {
+        expect(await res.text()).toContain(content)
+      }
+    }
+  })
+
   it('should handle has query encoding correctly', async () => {
     for (const expected of [
       {
