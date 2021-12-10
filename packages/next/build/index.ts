@@ -105,9 +105,10 @@ import { TelemetryPlugin } from './webpack/plugins/telemetry-plugin'
 import { MiddlewareManifest } from './webpack/plugins/middleware-plugin'
 import type { webpack5 as webpack } from 'next/dist/compiled/webpack/webpack'
 import { recursiveCopy } from '../lib/recursive-copy'
+import { Revalidate } from '../types'
 
 export type SsgRoute = {
-  initialRevalidateSeconds: number | false
+  initialRevalidateSeconds: Revalidate
   srcRoute: string | null
   dataRoute: string
 }

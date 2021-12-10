@@ -1,4 +1,3 @@
-import type { __ApiPreviewProps } from './api-utils'
 import type { CustomRoutes, Header } from '../lib/load-custom-routes'
 import type { DomainLocale } from './config'
 import type { DynamicRoutes, PageChecker, Params, Route } from './router'
@@ -56,6 +55,8 @@ import {
   setLazyProp,
   getCookieParser,
   tryGetPreviewData,
+  __ApiPreviewProps,
+  checkIsManualRevalidate,
 } from './api-utils'
 import { isTargetLikeServerless } from './config'
 import pathMatch from '../shared/lib/router/utils/path-match'
@@ -1843,6 +1844,16 @@ export default abstract class Server {
       isPreviewMode = previewData !== false
     }
 
+    let isManualRevalidate = false
+
+    if (isSSG) {
+      isManualRevalidate = checkIsManualRevalidate(
+        req,
+        res,
+        this.renderOpts.previewProps
+      )
+    }
+
     // Compute the iSSG cache key. We use the rewroteUrl since
     // pages with fallback: false are allowed to be rewritten to
     // and we need to look up the path by the rewritten path
@@ -1911,7 +1922,7 @@ export default abstract class Server {
 
     let ssgCacheKey =
       isPreviewMode || !isSSG || this.minimalMode || opts.supportsDynamicHTML
-        ? null // Preview mode bypasses the cache
+        ? null // Preview mode and manual revalidate bypasses the cache
         : `${locale ? `/${locale}` : ''}${
             (pathname === '/' || resolvedUrlPathname === '/') && locale
               ? ''
@@ -2053,6 +2064,10 @@ export default abstract class Server {
           fallbackMode = 'blocking'
         }
 
+        if (isManualRevalidate && fallbackMode !== false) {
+          fallbackMode = 'blocking'
+        }
+
         // When we did not respond from cache, we need to choose to block on
         // rendering or return a skeleton.
         //
@@ -2137,6 +2152,9 @@ export default abstract class Server {
               ? result.revalidate
               : /* default to minimum revalidate (this should be an invariant) */ 1,
         }
+      },
+      {
+        isManualRevalidate,
       }
     )
 

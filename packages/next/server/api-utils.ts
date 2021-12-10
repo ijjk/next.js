@@ -94,6 +94,8 @@ export async function apiResolver(
     apiRes.setPreviewData = (data, options = {}) =>
       setPreviewData(apiRes, data, Object.assign({}, apiContext, options))
     apiRes.clearPreviewData = () => clearPreviewData(apiRes)
+    apiRes.setManualRevalidate = () =>
+      setManualRevalidate(apiRes, Object.assign({}, apiContext))
 
     const resolver = interopDefault(resolverModule)
     let wasPiped = false
@@ -331,11 +333,72 @@ export function sendJson(res: NextApiResponse, jsonBody: any): void {
   res.send(jsonBody)
 }
 
+const COOKIE_NAME_PRERENDER_REVALIDATE = `__prerender_revalidate`
 const COOKIE_NAME_PRERENDER_BYPASS = `__prerender_bypass`
 const COOKIE_NAME_PRERENDER_DATA = `__next_preview_data`
 
+export const SYMBOL_MANUAL_REVALIDATE = Symbol(COOKIE_NAME_PRERENDER_REVALIDATE)
 export const SYMBOL_PREVIEW_DATA = Symbol(COOKIE_NAME_PRERENDER_DATA)
 const SYMBOL_CLEARED_COOKIES = Symbol(COOKIE_NAME_PRERENDER_BYPASS)
+
+function setManualRevalidate<T>(
+  res: NextApiResponse<T>,
+  options: __ApiPreviewProps
+): NextApiResponse<T> {
+  const previous = res.getHeader('Set-Cookie')
+  const { serialize } =
+    require('next/dist/compiled/cookie') as typeof import('cookie')
+
+  res.setHeader(`Set-Cookie`, [
+    ...(typeof previous === 'string'
+      ? [previous]
+      : Array.isArray(previous)
+      ? previous
+      : []),
+    serialize(COOKIE_NAME_PRERENDER_REVALIDATE, options.previewModeId, {
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV !== 'development' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV !== 'development',
+      path: '/',
+    }),
+  ])
+  return res
+}
+
+export function checkIsManualRevalidate(
+  req: IncomingMessage,
+  res: ServerResponse,
+  options: __ApiPreviewProps
+): boolean {
+  // Read cached preview data if present
+  if (SYMBOL_MANUAL_REVALIDATE in req) {
+    return (req as any)[SYMBOL_MANUAL_REVALIDATE] as any
+  }
+
+  const getCookies = getCookieParser(req.headers)
+  let cookies: NextApiRequestCookies
+  try {
+    cookies = getCookies()
+  } catch {
+    // TODO: warn
+    return false
+  }
+  const hasPrerenderRevalidate = COOKIE_NAME_PRERENDER_REVALIDATE in cookies
+
+  if (!hasPrerenderRevalidate) {
+    return false
+  }
+
+  const isManualRevalidate =
+    cookies[COOKIE_NAME_PRERENDER_REVALIDATE] === options.previewModeId
+
+  Object.defineProperty(req, SYMBOL_PREVIEW_DATA, {
+    value: isManualRevalidate,
+    enumerable: false,
+  })
+  clearCookies(res, [COOKIE_NAME_PRERENDER_REVALIDATE])
+  return isManualRevalidate
+}
 
 export function tryGetPreviewData(
   req: IncomingMessage,
@@ -492,41 +555,38 @@ function setPreviewData<T>(
   return res
 }
 
-function clearPreviewData<T>(res: NextApiResponse<T>): NextApiResponse<T> {
-  if (SYMBOL_CLEARED_COOKIES in res) {
-    return res
-  }
-
+function clearCookies(res: ServerResponse, cookiesToClear: string[]) {
+  const previous = res.getHeader('Set-Cookie')
   const { serialize } =
     require('next/dist/compiled/cookie') as typeof import('cookie')
-  const previous = res.getHeader('Set-Cookie')
+
   res.setHeader(`Set-Cookie`, [
     ...(typeof previous === 'string'
       ? [previous]
       : Array.isArray(previous)
       ? previous
       : []),
-    serialize(COOKIE_NAME_PRERENDER_BYPASS, '', {
-      // To delete a cookie, set `expires` to a date in the past:
-      // https://tools.ietf.org/html/rfc6265#section-4.1.1
-      // `Max-Age: 0` is not valid, thus ignored, and the cookie is persisted.
-      expires: new Date(0),
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV !== 'development' ? 'none' : 'lax',
-      secure: process.env.NODE_ENV !== 'development',
-      path: '/',
-    }),
-    serialize(COOKIE_NAME_PRERENDER_DATA, '', {
-      // To delete a cookie, set `expires` to a date in the past:
-      // https://tools.ietf.org/html/rfc6265#section-4.1.1
-      // `Max-Age: 0` is not valid, thus ignored, and the cookie is persisted.
-      expires: new Date(0),
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV !== 'development' ? 'none' : 'lax',
-      secure: process.env.NODE_ENV !== 'development',
-      path: '/',
+    ...cookiesToClear.map((cookieName) => {
+      return serialize(cookieName, '', {
+        // To delete a cookie, set `expires` to a date in the past:
+        // https://tools.ietf.org/html/rfc6265#section-4.1.1
+        // `Max-Age: 0` is not valid, thus ignored, and the cookie is persisted.
+        expires: new Date(0),
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV !== 'development' ? 'none' : 'lax',
+        secure: process.env.NODE_ENV !== 'development',
+        path: '/',
+      })
     }),
   ])
+}
+
+function clearPreviewData<T>(res: NextApiResponse<T>) {
+  if (SYMBOL_CLEARED_COOKIES in res) {
+    return res
+  }
+
+  clearCookies(res, [COOKIE_NAME_PRERENDER_BYPASS, COOKIE_NAME_PRERENDER_DATA])
 
   Object.defineProperty(res, SYMBOL_CLEARED_COOKIES, {
     value: true,

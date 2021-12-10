@@ -3,11 +3,12 @@ import { isResSent } from '../shared/lib/utils'
 import generateETag from 'etag'
 import fresh from 'next/dist/compiled/fresh'
 import RenderResult from './render-result'
+import { Revalidate } from '../types'
 
 export type PayloadOptions =
   | { private: true }
   | { private: boolean; stateful: true }
-  | { private: boolean; stateful: false; revalidate: number | false }
+  | { private: boolean; stateful: false; revalidate: Revalidate }
 
 export function setRevalidateHeaders(
   res: ServerResponse,

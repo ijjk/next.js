@@ -3,6 +3,7 @@ import LRUCache from 'next/dist/compiled/lru-cache'
 import path from 'path'
 import { PrerenderManifest } from '../build'
 import { PRERENDER_MANIFEST } from '../shared/lib/constants'
+import { Revalidate } from '../types'
 import { normalizePagePath } from './normalize-page-path'
 
 function toRoute(pathname: string): string {
@@ -23,9 +24,9 @@ interface CachedPageValue {
 export type IncrementalCacheValue = CachedRedirectValue | CachedPageValue
 
 type IncrementalCacheEntry = {
-  curRevalidate?: number | false
+  curRevalidate?: Revalidate
   // milliseconds to revalidate after
-  revalidateAfter: number | false
+  revalidateAfter: Revalidate
   isStale?: boolean
   value: IncrementalCacheValue | null
 }
@@ -101,10 +102,7 @@ export class IncrementalCache {
     return path.join(this.incrementalOptions.pagesDir!, `${pathname}.${ext}`)
   }
 
-  private calculateRevalidate(
-    pathname: string,
-    fromTime: number
-  ): number | false {
+  private calculateRevalidate(pathname: string, fromTime: number): Revalidate {
     pathname = toRoute(pathname)
 
     // in development we don't have a prerender-manifest
@@ -143,7 +141,8 @@ export class IncrementalCache {
         const revalidateAfter = this.calculateRevalidate(pathname, now)
         data = {
           value: null,
-          revalidateAfter: revalidateAfter !== false ? now : false,
+          revalidateAfter:
+            typeof revalidateAfter === 'number' ? now : revalidateAfter,
         }
       }
 
@@ -195,7 +194,7 @@ export class IncrementalCache {
   async set(
     pathname: string,
     data: IncrementalCacheValue | null,
-    revalidateSeconds?: number | false
+    revalidateSeconds?: Revalidate
   ) {
     if (this.incrementalOptions.dev) return
     if (typeof revalidateSeconds !== 'undefined') {

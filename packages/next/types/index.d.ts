@@ -104,10 +104,12 @@ export type GetStaticPropsContext<
   defaultLocale?: string
 }
 
+export type Revalidate = number | boolean
+
 export type GetStaticPropsResult<P> =
-  | { props: P; revalidate?: number | boolean }
-  | { redirect: Redirect; revalidate?: number | boolean }
-  | { notFound: true; revalidate?: number | boolean }
+  | { props: P; revalidate?: Revalidate }
+  | { redirect: Redirect; revalidate?: Revalidate }
+  | { notFound: true; revalidate?: Revalidate }
 
 export type GetStaticProps<
   P extends { [key: string]: any } = { [key: string]: any },

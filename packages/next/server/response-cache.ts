@@ -1,3 +1,5 @@
+import { Revalidate } from '../types'
+import { checkIsManualRevalidate } from './api-utils'
 import { IncrementalCache } from './incremental-cache'
 import RenderResult from './render-result'
 
@@ -15,7 +17,7 @@ interface CachedPageValue {
 export type ResponseCacheValue = CachedRedirectValue | CachedPageValue
 
 export type ResponseCacheEntry = {
-  revalidate?: number | false
+  revalidate?: Revalidate
   value: ResponseCacheValue | null
 }
 
@@ -34,7 +36,8 @@ export default class ResponseCache {
 
   public get(
     key: string | null,
-    responseGenerator: ResponseGenerator
+    responseGenerator: ResponseGenerator,
+    options: { isManualRevalidate?: boolean } = {}
   ): Promise<ResponseCacheEntry | null> {
     const pendingResponse = key ? this.pendingResponses.get(key) : null
     if (pendingResponse) {
@@ -71,7 +74,8 @@ export default class ResponseCache {
     ;(async () => {
       try {
         const cachedResponse = key ? await this.incrementalCache.get(key) : null
-        if (cachedResponse) {
+
+        if (cachedResponse && !options.isManualRevalidate) {
           resolve({
             revalidate: cachedResponse.curRevalidate,
             value:

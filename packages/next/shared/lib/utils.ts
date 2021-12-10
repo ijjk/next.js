@@ -293,6 +293,11 @@ export type NextApiResponse<T = any> = ServerResponse & {
     }
   ) => NextApiResponse<T>
   clearPreviewData: () => NextApiResponse<T>
+
+  /**
+   * Enable manual revalidate for the next request
+   */
+  setManualRevalidate: () => NextApiResponse<T>
 }
 
 /**
