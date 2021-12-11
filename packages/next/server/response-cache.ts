@@ -22,7 +22,8 @@ export type ResponseCacheEntry = {
 }
 
 type ResponseGenerator = (
-  hasResolved: boolean
+  hasResolved: boolean,
+  hadCache: boolean
 ) => Promise<ResponseCacheEntry | null>
 
 export default class ResponseCache {
@@ -94,7 +95,7 @@ export default class ResponseCache {
           }
         }
 
-        const cacheEntry = await responseGenerator(resolved)
+        const cacheEntry = await responseGenerator(resolved, !!cachedResponse)
         resolve(cacheEntry)
 
         if (key && cacheEntry && typeof cacheEntry.revalidate !== 'undefined') {

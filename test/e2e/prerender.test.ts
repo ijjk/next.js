@@ -1,4 +1,5 @@
 import cheerio from 'cheerio'
+import cookie from 'cookie'
 import { join, sep } from 'path'
 import escapeRegex from 'escape-string-regexp'
 import { createNext, FileRef } from 'e2e-utils'
@@ -1892,4 +1893,173 @@ describe('Prerender', () => {
     }
   }
   runTests((global as any).isNextDev)
+
+  if (!(global as any).isNextDev) {
+    it('should handle manual revalidate for fallback: blocking', async () => {
+      const html = await renderViaHTTP(
+        next.url,
+        '/blocking-fallback-once/test-manual-1'
+      )
+      const $ = cheerio.load(html)
+      const initialTime = $('#time').text()
+
+      expect($('p').text()).toMatch(/Post:.*?test-manual-1/)
+
+      const html2 = await renderViaHTTP(
+        next.url,
+        '/blocking-fallback-once/test-manual-1'
+      )
+      const $2 = cheerio.load(html2)
+
+      expect(initialTime).toBe($2('#time').text())
+
+      const res = await fetchViaHTTP(
+        next.url,
+        '/api/manual-revalidate',
+        {
+          pathname: '/blocking-fallback-once/test-manual-1',
+        },
+        { redirect: 'manual' }
+      )
+
+      expect(res.status).toBe(307)
+      const originalCookies = res.headers.get('set-cookie').split(',')
+      const cookies = originalCookies.map((item) => cookie.parse(item))
+      const revalidateCookie = cookies.find(
+        (item) => item['__prerender_revalidate']
+      )['__prerender_revalidate']
+
+      expect(revalidateCookie).toBeDefined()
+
+      const res3 = await fetchViaHTTP(
+        next.url,
+        '/blocking-fallback-once/test-manual-1',
+        undefined,
+        {
+          headers: {
+            cookie: `__prerender_revalidate=${revalidateCookie}`,
+          },
+        }
+      )
+      const html3 = await res3.text()
+      const $3 = cheerio.load(html3)
+      const revalidatedTime = $3('#time').text()
+
+      expect(revalidatedTime).not.toBe(initialTime)
+      // should clear the cookie after being used once
+      expect(res3.headers.get('set-cookie')).toContain('__prerender_revalidate')
+
+      const html4 = await renderViaHTTP(
+        next.url,
+        '/blocking-fallback-once/test-manual-1'
+      )
+      const $4 = cheerio.load(html4)
+      expect($4('#time').text()).toBe(revalidatedTime)
+    })
+
+    it('should handle manual revalidate for fallback: false', async () => {
+      const res = await fetchViaHTTP(
+        next.url,
+        '/catchall-explicit/test-manual-1'
+      )
+      expect(res.status).toBe(404)
+
+      const res2 = await fetchViaHTTP(
+        next.url,
+        '/api/manual-revalidate',
+        {
+          pathname: '/catchall-explicity/test-manual-1',
+        },
+        { redirect: 'manual' }
+      )
+
+      expect(res2.status).toBe(307)
+      const originalCookies = res2.headers.get('set-cookie').split(',')
+      const cookies = originalCookies.map((item) => cookie.parse(item))
+      const revalidateCookie = cookies.find(
+        (item) => item['__prerender_revalidate']
+      )['__prerender_revalidate']
+
+      expect(revalidateCookie).toBeDefined()
+
+      // fallback: false pages should only manually revalidate
+      // prerendered paths
+      const res3 = await fetchViaHTTP(
+        next.url,
+        '/catchall-explicit/test-manual-1',
+        undefined,
+        {
+          headers: {
+            cookie: `__prerender_revalidate=${revalidateCookie}`,
+          },
+        }
+      )
+      expect(res3.status).toBe(404)
+
+      const res4 = await fetchViaHTTP(next.url, '/catchall-explicit/first')
+      expect(res4.status).toBe(200)
+      const html = await res4.text()
+      const $ = cheerio.load(html)
+      const initialTime = $('#time').text()
+
+      const res5 = await fetchViaHTTP(
+        next.url,
+        '/catchall-explicit/first',
+        undefined,
+        {
+          headers: {
+            cookie: `__prerender_revalidate=${revalidateCookie}`,
+          },
+        }
+      )
+      expect(res5.status).toBe(200)
+      const html2 = await res5.text()
+      const $2 = cheerio.load(html2)
+
+      expect(initialTime).not.toBe($2('#time').text())
+    })
+
+    it('should not manual revalidate for invalid cookie', async () => {
+      const html = await renderViaHTTP(
+        next.url,
+        '/blocking-fallback-once/test-manual-2'
+      )
+      const $ = cheerio.load(html)
+      const initialTime = $('#time').text()
+
+      expect($('p').text()).toMatch(/Post:.*?test-manual-2/)
+
+      const html2 = await renderViaHTTP(
+        next.url,
+        '/blocking-fallback-once/test-manual-2'
+      )
+      const $2 = cheerio.load(html2)
+
+      expect(initialTime).toBe($2('#time').text())
+
+      const res3 = await fetchViaHTTP(
+        next.url,
+        '/blocking-fallback-once/test-manual-2',
+        undefined,
+        {
+          headers: {
+            cookie: `__prerender_revalidate=abc123`,
+          },
+        }
+      )
+      const html3 = await res3.text()
+      const $3 = cheerio.load(html3)
+
+      expect($3('#time').text()).toBe(initialTime)
+      // should clear the cookie
+      expect(res3.headers.get('set-cookie')).toContain('__prerender_revalidate')
+
+      const html4 = await renderViaHTTP(
+        next.url,
+        '/blocking-fallback-once/test-manual-2'
+      )
+      const $4 = cheerio.load(html4)
+      expect($4('#time').text()).toBe(initialTime)
+    })
+  }
 })
