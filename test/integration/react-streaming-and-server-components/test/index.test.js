@@ -25,6 +25,7 @@ const nativeModuleTestAppDir = join(__dirname, '../unsupported-native-module')
 const distDir = join(__dirname, '../app/.next')
 const documentPage = new File(join(appDir, 'pages/_document.jsx'))
 const appPage = new File(join(appDir, 'pages/_app.js'))
+const appServerPage = new File(join(appDir, 'pages/_app.server.js'))
 const error500Page = new File(join(appDir, 'pages/500.js'))
 
 const documentWithGip = `
@@ -44,6 +45,13 @@ export default function Document() {
 
 Document.getInitialProps = (ctx) => {
   return ctx.defaultGetInitialProps(ctx)
+}
+`
+
+const rscAppPage = `
+import Container from '../components/container.server'
+export default function App({children}) {
+  return <Container>{children}</Container>
 }
 `
 
@@ -175,6 +183,22 @@ describe('concurrentFeatures - prod', () => {
   runBasicTests(context, 'prod')
 })
 
+const customAppPageSuite = {
+  runTests: (context) => {
+    it('should render container in app', async () => {
+      const indexHtml = await renderViaHTTP(context.appPort, '/')
+      const indexFlight = await renderViaHTTP(context.appPort, '/?__flight__=1')
+      expect(indexHtml).toContain('container-server')
+      expect(indexFlight).toContain('container-server')
+    })
+  },
+  before: () => appServerPage.write(rscAppPage),
+  after: () => appServerPage.delete(),
+}
+
+runSuite('Custom App', 'dev', customAppPageSuite)
+runSuite('Custom App', 'prod', customAppPageSuite)
+
 describe('concurrentFeatures - dev', () => {
   const context = { appDir }
 
@@ -229,7 +253,7 @@ const documentSuite = {
 
       expect(res.status).toBe(500)
       expect(html).toContain(
-        'Error: `getInitialProps` in Document component is not supported with `concurrentFeatures` enabled.'
+        '`getInitialProps` in Document component is not supported with `concurrentFeatures` enabled.'
       )
     })
   },
@@ -295,13 +319,13 @@ async function runBasicTests(context, env) {
 
     const browser = await webdriver(context.appPort, '/next-api/link')
     await browser.eval('window.beforeNav = 1')
-    await browser.elementByCss('#next_id').click()
-    await browser.elementByCss('#next_id').click()
-    await check(() => browser.waitForElementByCss('#query').text(), /query:2/)
+    await browser.waitForElementByCss('#next_id').click()
+    await check(() => browser.elementByCss('#query').text(), 'query:1')
+
+    await browser.waitForElementByCss('#next_id').click()
+    await check(() => browser.elementByCss('#query').text(), 'query:2')
 
     if (!isDev) {
-      // this might do a hard navigation in development
-      // so only require this check in production
       expect(await browser.eval('window.beforeNav')).toBe(1)
     }
   })
@@ -353,6 +377,46 @@ async function runBasicTests(context, env) {
         const result = await resolveStreamResponse(response)
         expect(result).toContain('component:index.server')
       }
+    )
+  })
+
+  it('should support partial hydration with inlined server data', async () => {
+    await fetchViaHTTP(context.appPort, '/partial-hydration', null, {}).then(
+      async (response) => {
+        let gotFallback = false
+        let gotData = false
+        let gotInlinedData = false
+
+        await resolveStreamResponse(response, (_, result) => {
+          gotInlinedData = result.includes('self.__next_s=')
+          gotData = result.includes('next_streaming_data')
+          if (!gotFallback) {
+            gotFallback = result.includes('next_streaming_fallback')
+            if (gotFallback) {
+              expect(gotData).toBe(false)
+              expect(gotInlinedData).toBe(false)
+            }
+          }
+        })
+
+        expect(gotFallback).toBe(true)
+        expect(gotData).toBe(true)
+        expect(gotInlinedData).toBe(true)
+      }
+    )
+
+    // Should end up with "next_streaming_data".
+    const browser = await webdriver(context.appPort, '/partial-hydration')
+    const content = await browser.eval(`window.document.body.innerText`)
+    expect(content).toContain('next_streaming_data')
+
+    // Should support partial hydration: the boundary should still be pending
+    // while another part is hydrated already.
+    expect(await browser.eval(`window.partial_hydration_suspense_result`)).toBe(
+      'next_streaming_fallback'
+    )
+    expect(await browser.eval(`window.partial_hydration_counter_result`)).toBe(
+      'count: 1'
     )
   })
 
