@@ -76,7 +76,11 @@ export default class ResponseCache {
       try {
         const cachedResponse = key ? await this.incrementalCache.get(key) : null
 
-        if (cachedResponse && !options.isManualRevalidate) {
+        if (
+          cachedResponse &&
+          (!options.isManualRevalidate ||
+            cachedResponse.revalidateAfter === false)
+        ) {
           resolve({
             revalidate: cachedResponse.curRevalidate,
             value:
