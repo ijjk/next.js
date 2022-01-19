@@ -10,6 +10,7 @@ import { sendEtagResponse } from './send-payload'
 import generateETag from 'next/dist/compiled/etag'
 import isError from '../lib/is-error'
 import { interopDefault } from '../lib/interop-default'
+import { BaseNextRequest, BaseNextResponse } from './base-http'
 
 export type NextApiRequestCookies = { [key: string]: string }
 export type NextApiRequestQuery = { [key: string]: string | string[] }
@@ -143,7 +144,7 @@ export async function apiResolver(
  * @param req request object
  */
 export async function parseBody(
-  req: NextApiRequest,
+  req: IncomingMessage,
   limit: string | number
 ): Promise<any> {
   let contentType
@@ -339,7 +340,7 @@ const COOKIE_NAME_PRERENDER_DATA = `__next_preview_data`
 
 export const SYMBOL_MANUAL_REVALIDATE = Symbol(COOKIE_NAME_PRERENDER_REVALIDATE)
 export const SYMBOL_PREVIEW_DATA = Symbol(COOKIE_NAME_PRERENDER_DATA)
-const SYMBOL_CLEARED_COOKIES = Symbol(COOKIE_NAME_PRERENDER_BYPASS)
+export const SYMBOL_CLEARED_COOKIES = Symbol(COOKIE_NAME_PRERENDER_BYPASS)
 
 function setManualRevalidate<T>(
   res: NextApiResponse<T>,
@@ -366,8 +367,8 @@ function setManualRevalidate<T>(
 }
 
 export function checkIsManualRevalidate(
-  req: IncomingMessage,
-  res: ServerResponse,
+  req: IncomingMessage | BaseNextRequest,
+  res: ServerResponse | BaseNextResponse,
   options: __ApiPreviewProps
 ): boolean {
   // Read cached preview data if present
@@ -401,8 +402,8 @@ export function checkIsManualRevalidate(
 }
 
 export function tryGetPreviewData(
-  req: IncomingMessage,
-  res: ServerResponse,
+  req: IncomingMessage | BaseNextRequest,
+  res: ServerResponse | BaseNextResponse,
   options: __ApiPreviewProps
 ): PreviewData {
   // Read cached preview data if present
@@ -555,7 +556,10 @@ function setPreviewData<T>(
   return res
 }
 
-function clearCookies(res: ServerResponse, cookiesToClear: string[]) {
+function clearCookies(
+  res: ServerResponse | BaseNextResponse,
+  cookiesToClear: string[]
+) {
   const previous = res.getHeader('Set-Cookie')
   const { serialize } =
     require('next/dist/compiled/cookie') as typeof import('cookie')

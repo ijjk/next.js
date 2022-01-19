@@ -4,6 +4,7 @@ import generateETag from 'next/dist/compiled/etag'
 import fresh from 'next/dist/compiled/fresh'
 import RenderResult from './render-result'
 import { Revalidate } from '../types'
+import { BaseNextResponse } from './base-http'
 
 export type PayloadOptions =
   | { private: true }
@@ -11,7 +12,7 @@ export type PayloadOptions =
   | { private: boolean; stateful: false; revalidate: Revalidate }
 
 export function setRevalidateHeaders(
-  res: ServerResponse,
+  res: ServerResponse | BaseNextResponse,
   options: PayloadOptions
 ) {
   if (options.private || options.stateful) {
