@@ -1,10 +1,11 @@
-import { IncomingMessage, ServerResponse } from 'http'
+import type { IncomingMessage, ServerResponse } from 'http'
+import type { BaseNextResponse } from './base-http'
+
 import { isResSent } from '../shared/lib/utils'
 import generateETag from 'next/dist/compiled/etag'
 import fresh from 'next/dist/compiled/fresh'
 import RenderResult from './render-result'
 import { Revalidate } from '../types'
-import { BaseNextResponse } from './base-http'
 
 export type PayloadOptions =
   | { private: true }
