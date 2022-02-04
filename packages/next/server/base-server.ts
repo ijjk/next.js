@@ -34,10 +34,7 @@ import {
 } from '../shared/lib/router/utils'
 import * as envConfig from '../shared/lib/runtime-config'
 import { DecodeError, normalizeRepeatedSlashes } from '../shared/lib/utils'
-import {
-  __ApiPreviewProps,
-  checkIsManualRevalidate,
-} from './api-utils'
+import { __ApiPreviewProps, checkIsManualRevalidate } from './api-utils'
 import { setLazyProp, getCookieParser, tryGetPreviewData } from './api-utils'
 import { isTargetLikeServerless } from './utils'
 import Router, { replaceBasePath, route } from './router'

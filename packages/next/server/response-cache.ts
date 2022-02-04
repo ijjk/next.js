@@ -1,5 +1,4 @@
 import { Revalidate } from '../types'
-import { checkIsManualRevalidate } from './api-utils'
 import { IncrementalCache } from './incremental-cache'
 import RenderResult from './render-result'
 

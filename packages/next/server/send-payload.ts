@@ -5,7 +5,7 @@ import { isResSent } from '../shared/lib/utils'
 import generateETag from 'next/dist/compiled/etag'
 import fresh from 'next/dist/compiled/fresh'
 import RenderResult from './render-result'
-import { Revalidate } from '../types'
+import { Revalidate } from 'next/types'
 
 export type PayloadOptions =
   | { private: true }
