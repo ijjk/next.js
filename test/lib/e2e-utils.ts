@@ -117,6 +117,7 @@ export async function createNext(opts: {
   dependencies?: {
     [name: string]: string
   }
+  env?: Record<string, string>
   nextConfig?: NextConfig
   skipStart?: boolean
   installCommand?: InstallCommand
