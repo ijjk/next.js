@@ -1,21 +1,14 @@
+import { join } from 'path'
+import { fetchViaHTTP } from 'next-test-utils'
 import { createNext, FileRef } from 'e2e-utils'
 import { NextInstance } from 'test/lib/next-modes/base'
-import { fetchViaHTTP } from 'next-test-utils'
-import path from 'path'
 
 describe('Edge API endpoints can receive body', () => {
   let next: NextInstance
 
   beforeAll(async () => {
     next = await createNext({
-      files: {
-        'pages/api/edge.js': new FileRef(
-          path.resolve(__dirname, './app/pages/api/edge.js')
-        ),
-        'pages/api/index.js': new FileRef(
-          path.resolve(__dirname, './app/pages/api/index.js')
-        ),
-      },
+      files: new FileRef(join(__dirname, 'app')),
       dependencies: {},
     })
   })
@@ -49,5 +42,11 @@ describe('Edge API endpoints can receive body', () => {
 
     expect(res.status).toBe(200)
     expect(await res.text()).toBe('got: hello, world.')
+  })
+
+  it('should work with fetch response correctly', async () => {
+    const res = await fetchViaHTTP(next.url, '/api/fetch-response')
+    expect(res.status).toBe(200)
+    expect(await res.text()).toContain('Example Domain')
   })
 })
