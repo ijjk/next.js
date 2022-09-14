@@ -1,5 +1,9 @@
 import { experimental_use as use } from 'react'
 
+export const config = {
+  revalidate: false,
+}
+
 async function getData() {
   await new Promise((resolve) => setTimeout(resolve, 5000))
   return {
@@ -7,8 +11,11 @@ async function getData() {
   }
 }
 
-export default function SlowPage(props) {
+export default function nestedPage(props) {
   const data = use(getData())
-
-  return <h1 id="slow-page-message">{data.message}</h1>
+  return (
+    <>
+      <p id="slow-page-message">{data.message}</p>
+    </>
+  )
 }

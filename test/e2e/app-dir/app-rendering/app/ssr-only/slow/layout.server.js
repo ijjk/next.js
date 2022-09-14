@@ -7,12 +7,11 @@ async function getData() {
   }
 }
 
-export default function SlowLayout(props) {
+export default function gsspLayout(props) {
   const data = use(getData())
-
   return (
     <>
-      <p id="slow-layout-message">{data.message}</p>
+      <h1 id="slow-layout-message">{data.message}</h1>
       {props.children}
     </>
   )

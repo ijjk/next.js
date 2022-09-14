@@ -980,7 +980,7 @@ export default abstract class Server<ServerOptions extends Options = Options> {
     let resolvedUrlPathname =
       getRequestMeta(req, '_nextRewroteUrl') || urlPathname
 
-    if (isAppPath) {
+    if (isAppPath && !this.renderOpts.dev) {
       const manifest = this.getPrerenderManifest()
 
       if (manifest.routes[resolvedUrlPathname]) {

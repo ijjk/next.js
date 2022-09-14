@@ -1,31 +1,19 @@
-export function getStaticProps({ params }) {
-  return {
-    props: {
-      now: Date.now(),
-      params,
-    },
-  }
-}
+import { experimental_use as use } from 'react'
 
-export function getStaticPaths() {
+function getData({ params }) {
   return {
-    paths: [
-      {
-        params: { projectId: 'project-1' },
-      },
-      {
-        params: { projectId: 'project-2' },
-      },
-    ],
-    fallback: 'blocking',
+    now: Date.now(),
+    params,
   }
 }
 
 export default function Page(props) {
+  const data = use(getData(props))
+
   return (
     <>
       <p>/dashboard/project/[projectId]</p>
-      <p id="props">{JSON.stringify(props)}</p>
+      <p id="props">{JSON.stringify(data)}</p>
     </>
   )
 }

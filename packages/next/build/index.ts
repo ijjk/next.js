@@ -2137,6 +2137,7 @@ export default async function build(
             const appConfig = appDefaultConfigs.get(originalAppPath) || {}
 
             if (
+              appConfig.revalidate !== 0 &&
               isDynamicRoute(originalAppPath) &&
               appDynamicParamPaths.has(originalAppPath)
             ) {
