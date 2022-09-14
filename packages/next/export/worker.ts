@@ -28,7 +28,6 @@ import RenderResult from '../server/render-result'
 import isError from '../lib/is-error'
 import { addRequestMeta } from '../server/request-meta'
 import { normalizeAppPath } from '../shared/lib/router/utils/app-paths'
-import { DynamicServerError } from '../client/components/hooks-server-context'
 
 loadRequireHook()
 const envConfig = require('../shared/lib/runtime-config')
@@ -388,6 +387,10 @@ export default async function exportPage({
         // and bail when dynamic dependencies are detected
         // only fully static paths are fully generated here
         if (isAppDir) {
+          const {
+            DynamicServerError,
+          } = require('../client/components/hooks-server-context')
+
           const { renderToHTMLOrFlight } =
             require('../server/app-render') as typeof import('../server/app-render')
 
