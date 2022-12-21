@@ -79,6 +79,14 @@ export interface NextJsWebpackConfig {
 }
 
 export interface ExperimentalConfig {
+  maxFunctionSize?: number
+  functionsConfig?: {
+    [srcFileGlob: string]: {
+      // TODO: move includeFiles/excludeFiles here
+      maxDuration?: number
+      memory?: number
+    }
+  }
   fetchCache?: boolean
   allowMiddlewareResponseBody?: boolean
   skipMiddlewareUrlNormalize?: boolean

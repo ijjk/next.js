@@ -97,6 +97,44 @@ export async function ncc_node_html_parser(task, opts) {
 }
 
 // eslint-disable-next-line camelcase
+externals['@vercel/routing-utils'] = 'next/dist/compiled/@vercel/routing-utils'
+export async function ncc_routing_utils(task, opts) {
+  const srcDistDir = dirname(require.resolve('@vercel/routing-utils'))
+  const distFiles = await fs.readdir(srcDistDir)
+
+  for (const file of distFiles) {
+    const contents = await fs.readFile(join(srcDistDir, file), 'utf8')
+
+    // path-to-regexp is a runtime dep so ensure we use our
+    // version of it
+    await fs.ensureDir(
+      dirname(join(__dirname, 'compiled/@vercel/routing-utils', file))
+    )
+    await fs.writeFile(
+      join(__dirname, 'compiled/@vercel/routing-utils', file),
+      contents.replace(
+        /['"']path-to-regexp['"]/g,
+        '"next/dist/compiled/path-to-regexp"'
+      )
+    )
+  }
+  await fs.ensureDir(dirname(join(__dirname, 'compiled/@vercel/routing-utils')))
+  await fs.writeFile(
+    join(__dirname, 'compiled/@vercel/routing-utils/package.json'),
+    JSON.stringify({ main: './index.js', types: './index.d.ts' })
+  )
+}
+
+// eslint-disable-next-line camelcase
+externals['@vercel/build-utils'] = 'next/dist/compiled/@vercel/build-utils'
+export async function ncc_build_utils(task, opts) {
+  await fs.copy(
+    dirname(require.resolve('@vercel/build-utils/package.json')),
+    join(__dirname, 'compiled/@vercel/build-utils')
+  )
+}
+
+// eslint-disable-next-line camelcase
 externals['@babel/runtime'] = 'next/dist/compiled/@babel/runtime'
 export async function copy_babel_runtime(task, opts) {
   const runtimeDir = dirname(require.resolve('@babel/runtime/package.json'))
@@ -134,6 +172,15 @@ export async function copy_babel_runtime(task, opts) {
     fs.mkdirSync(dirname(outputPath), { recursive: true })
     fs.writeFileSync(outputPath, contents)
   }
+}
+
+// eslint-disable-next-line camelcase
+externals['buffer-crc32'] = 'next/dist/compiled/buffer-crc32'
+export async function ncc_buffer_crc32(task, opts) {
+  await task
+    .source(opts.src || relative(__dirname, require.resolve('buffer-crc32')))
+    .ncc({ packageName: 'buffer-crc32', externals })
+    .target('compiled/buffer-crc32')
 }
 
 // eslint-disable-next-line camelcase
@@ -1959,7 +2006,9 @@ export async function ncc(task, opts) {
     .clear('compiled')
     .parallel(
       [
+        'ncc_buffer_crc32',
         'ncc_node_html_parser',
+        'ncc_build_utils',
         'ncc_watchpack',
         'ncc_chalk',
         'ncc_napirs_triples',
@@ -2074,6 +2123,7 @@ export async function ncc(task, opts) {
   await task.parallel(['ncc_babel_bundle_packages'], opts)
   await task.serial(
     [
+      'ncc_routing_utils',
       'ncc_browserslist',
       'copy_regenerator_runtime',
       'copy_babel_runtime',

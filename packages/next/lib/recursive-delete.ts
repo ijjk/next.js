@@ -1,5 +1,5 @@
 import { Dirent, promises } from 'fs'
-import { join, isAbsolute, dirname } from 'path'
+import { join } from 'path'
 import isError from './is-error'
 
 const sleep = (timeout: number) =>
@@ -28,7 +28,7 @@ const unlinkPath = async (p: string, isDir = false, t = 1): Promise<void> => {
     if (code === 'ENOENT') {
       return
     }
-
+    console.error('throwing 2', e)
     throw e
   }
 }
@@ -51,6 +51,7 @@ export async function recursiveDelete(
     if (isError(e) && e.code === 'ENOENT') {
       return
     }
+    console.error('throwing', e)
     throw e
   }
 
@@ -62,19 +63,6 @@ export async function recursiveDelete(
       // if part is a symbolic link, follow it using stat
       let isDirectory = part.isDirectory()
       const isSymlink = part.isSymbolicLink()
-
-      if (isSymlink) {
-        const linkPath = await promises.readlink(absolutePath)
-
-        try {
-          const stats = await promises.stat(
-            isAbsolute(linkPath)
-              ? linkPath
-              : join(dirname(absolutePath), linkPath)
-          )
-          isDirectory = stats.isDirectory()
-        } catch (_) {}
-      }
 
       const pp = join(previousPath, part.name)
       const isNotExcluded = !exclude || !exclude.test(pp)

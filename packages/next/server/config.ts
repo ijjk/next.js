@@ -6,7 +6,11 @@ import { Agent as HttpsAgent } from 'https'
 import findUp from 'next/dist/compiled/find-up'
 import chalk from '../lib/chalk'
 import * as Log from '../build/output/log'
-import { CONFIG_FILES, PHASE_DEVELOPMENT_SERVER } from '../shared/lib/constants'
+import {
+  CONFIG_FILES,
+  PHASE_DEVELOPMENT_SERVER,
+  PHASE_PRODUCTION_SERVER,
+} from '../shared/lib/constants'
 import { execOnce } from '../shared/lib/utils'
 import {
   defaultConfig,
@@ -807,7 +811,14 @@ export default async function loadConfig(
   rawConfig?: boolean
 ): Promise<NextConfigComplete> {
   await loadEnvConfig(dir, phase === PHASE_DEVELOPMENT_SERVER, Log)
-  loadWebpackHook()
+
+  try {
+    loadWebpackHook()
+  } catch (err) {
+    if (phase !== PHASE_PRODUCTION_SERVER) {
+      throw err
+    }
+  }
 
   let configFileName = 'next.config.js'
 

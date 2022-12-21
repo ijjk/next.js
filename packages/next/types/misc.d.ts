@@ -20,6 +20,11 @@ declare module 'next/dist/compiled/@next/react-refresh-utils/dist/ReactRefreshWe
   export = m
 }
 
+declare module 'next/dist/compiled/buffer-crc32' {
+  import m from 'buffer-crc32'
+  export = m
+}
+
 declare module 'next/dist/compiled/node-html-parser' {
   export * from 'node-html-parser'
 }

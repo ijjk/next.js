@@ -287,6 +287,9 @@ const configSchema = {
         fullySpecified: {
           type: 'boolean',
         },
+        functionsConfig: {
+          type: 'object',
+        },
         gzipSize: {
           type: 'boolean',
         },
@@ -307,6 +310,9 @@ const configSchema = {
         },
         manualClientBasePath: {
           type: 'boolean',
+        },
+        maxFunctionSize: {
+          type: 'number',
         },
         middlewarePrefetch: {
           // automatic typing doesn't like enum
