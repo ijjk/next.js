@@ -7,7 +7,7 @@ on:
 name: Build, test, and deploy
 
 env:
-  NAPI_CLI_VERSION: 2.12.0
+  NAPI_CLI_VERSION: 2.13.3
   TURBO_VERSION: 1.6.3
   RUST_TOOLCHAIN: nightly-2022-11-04
   PNPM_VERSION: 7.3.0
@@ -257,6 +257,7 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: 1
       NEXT_TEST_JOB: 1
+      TEST_TIMINGS_TOKEN: ${{ secrets.TEST_TIMINGS_TOKEN || secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -317,7 +318,7 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: 1
       NEXT_TEST_JOB: 1
-      TEST_TIMINGS_TOKEN: ${{ secrets.TEST_TIMINGS_TOKEN }}
+      TEST_TIMINGS_TOKEN: ${{ secrets.TEST_TIMINGS_TOKEN || secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -379,6 +380,7 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: 1
       NEXT_TEST_JOB: 1
+      TEST_TIMINGS_TOKEN: ${{ secrets.TEST_TIMINGS_TOKEN || secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -429,7 +431,7 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: 1
       NEXT_TEST_JOB: 1
-      TEST_TIMINGS_TOKEN: ${{ secrets.TEST_TIMINGS_TOKEN }}
+      TEST_TIMINGS_TOKEN: ${{ secrets.TEST_TIMINGS_TOKEN || secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -481,7 +483,7 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: 1
       NEXT_TEST_JOB: 1
-      TEST_TIMINGS_TOKEN: ${{ secrets.TEST_TIMINGS_TOKEN }}
+      TEST_TIMINGS_TOKEN: ${{ secrets.TEST_TIMINGS_TOKEN || secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
