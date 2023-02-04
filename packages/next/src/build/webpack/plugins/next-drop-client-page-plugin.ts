@@ -42,11 +42,11 @@ export class DropClientPage implements webpack.WebpackPluginInstance {
             entryModule.buildInfo.NEXT_ampFirst = true
           }
 
-          parser.hooks.preDeclarator.tap(PLUGIN_NAME, (declarator: any) => {
-            if (declarator?.id?.name === STRING_LITERAL_DROP_BUNDLE) {
-              markAsAmpFirst()
-            }
-          })
+          // parser.hooks.preDeclarator.tap(PLUGIN_NAME, (declarator: any) => {
+          //   if (declarator?.id?.name === STRING_LITERAL_DROP_BUNDLE) {
+          //     markAsAmpFirst()
+          //   }
+          // })
         }
 
         normalModuleFactory.hooks.parser

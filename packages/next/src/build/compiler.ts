@@ -1,6 +1,8 @@
 import { webpack } from 'next/dist/compiled/webpack/webpack'
 import { Span } from '../trace'
 
+import { rspack } from '@rspack/core'
+
 export type CompilerResult = {
   errors: webpack.StatsError[]
   warnings: webpack.StatsError[]
@@ -40,7 +42,9 @@ export function runCompiler(
   { runWebpackSpan }: { runWebpackSpan: Span }
 ): Promise<CompilerResult> {
   return new Promise((resolve, reject) => {
-    const compiler = webpack(config) as unknown as webpack.Compiler
+    console.log('running config', config)
+    const compiler = rspack(config as any)
+
     compiler.run((err, stats) => {
       const webpackCloseSpan = runWebpackSpan.traceChild('webpack-close', {
         name: config.name,

@@ -78,6 +78,7 @@
   },
   "dependencies": {
     "@next/env": "13.1.7-canary.4",
+    "@rspack/core": "0.0.0-239fa38b6-20230203022652",
     "@swc/helpers": "0.4.14",
     "caniuse-lite": "^1.0.30001406",
     "postcss": "8.4.14",

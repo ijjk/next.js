@@ -286,7 +286,7 @@ export function getDefineEnv({
       deviceSizes: config.images.deviceSizes,
       imageSizes: config.images.imageSizes,
       path: config.images.path,
-      loader: config.images.loader,
+      use: config.images.loader,
       dangerouslyAllowSVG: config.images.dangerouslyAllowSVG,
       unoptimized: config?.images?.unoptimized,
       ...(dev
@@ -676,7 +676,7 @@ export default async function getBaseWebpackConfig(
 
   const getBabelLoader = () => {
     return {
-      loader: require.resolve('./babel/loader/index'),
+      use: require.resolve('./babel/loader/index'),
       options: {
         configFile: babelConfigFile,
         isServer: isNodeServer || isEdgeServer,
@@ -708,7 +708,7 @@ export default async function getBaseWebpackConfig(
     }
 
     return {
-      loader: 'next-swc-loader',
+      use: [{ loader: 'next-swc-loader' }],
       options: {
         isServer: isNodeServer || isEdgeServer,
         rootDir: dir,
@@ -1349,6 +1349,42 @@ export default async function getBaseWebpackConfig(
       return path.join(resolved, '../target.css')
     })
 
+  const {
+    TerserPlugin,
+  } = require('./webpack/plugins/terser-webpack-plugin/src/index.js')
+  const terserMinifier = new TerserPlugin({
+    cacheDir: path.join(distDir, 'cache', 'next-minifier'),
+    parallel: config.experimental.cpus,
+    swcMinify: config.swcMinify,
+    terserOptions: {
+      ...terserOptions,
+      compress: {
+        ...terserOptions.compress,
+        ...(config.experimental.swcMinifyDebugOptions?.compress ?? {}),
+      },
+      mangle: {
+        ...terserOptions.mangle,
+        ...(config.experimental.swcMinifyDebugOptions?.mangle ?? {}),
+      },
+    },
+  })
+
+  const {
+    CssMinimizerPlugin,
+  } = require('./webpack/plugins/css-minimizer-plugin')
+  const cssMinifier = new CssMinimizerPlugin({
+    postcssOptions: {
+      map: {
+        // `inline: false` generates the source map in a separate file.
+        // Otherwise, the CSS file is needlessly large.
+        inline: false,
+        // `annotation: false` skips appending the `sourceMappingURL`
+        // to the end of the CSS file. Webpack already handles this.
+        annotation: false,
+      },
+    },
+  })
+
   let webpackConfig: webpack.Configuration = {
     parallelism: Number(process.env.NEXT_WEBPACK_PARALLELISM) || undefined,
     ...(isNodeServer ? { externalsPresets: { node: true } } : {}),
@@ -1523,46 +1559,9 @@ export default async function getBaseWebpackConfig(
       minimize: !dev && (isClient || isEdgeServer),
       minimizer: [
         // Minify JavaScript
-        (compiler: webpack.Compiler) => {
-          // @ts-ignore No typings yet
-          const {
-            TerserPlugin,
-          } = require('./webpack/plugins/terser-webpack-plugin/src/index.js')
-          new TerserPlugin({
-            cacheDir: path.join(distDir, 'cache', 'next-minifier'),
-            parallel: config.experimental.cpus,
-            swcMinify: config.swcMinify,
-            terserOptions: {
-              ...terserOptions,
-              compress: {
-                ...terserOptions.compress,
-                ...(config.experimental.swcMinifyDebugOptions?.compress ?? {}),
-              },
-              mangle: {
-                ...terserOptions.mangle,
-                ...(config.experimental.swcMinifyDebugOptions?.mangle ?? {}),
-              },
-            },
-          }).apply(compiler)
-        },
+        // terserMinifier,
         // Minify CSS
-        (compiler: webpack.Compiler) => {
-          const {
-            CssMinimizerPlugin,
-          } = require('./webpack/plugins/css-minimizer-plugin')
-          new CssMinimizerPlugin({
-            postcssOptions: {
-              map: {
-                // `inline: false` generates the source map in a separate file.
-                // Otherwise, the CSS file is needlessly large.
-                inline: false,
-                // `annotation: false` skips appending the `sourceMappingURL`
-                // to the end of the CSS file. Webpack already handles this.
-                annotation: false,
-              },
-            },
-          }).apply(compiler)
-        },
+        // cssMinifier
       ],
     },
     context: dir,
@@ -1573,6 +1572,16 @@ export default async function getBaseWebpackConfig(
         ...entrypoints,
       }
     },
+    env: getDefineEnv({
+      dev,
+      config,
+      distDir,
+      isClient,
+      hasRewrites,
+      isNodeServer,
+      isEdgeServer,
+      middlewareMatchers,
+    }),
     watchOptions,
     output: {
       // we must set publicPath to an empty value to override the default of
@@ -1710,9 +1719,7 @@ export default async function getBaseWebpackConfig(
                 test: codeCondition.test,
                 exclude: [staticGenerationAsyncStorageRegex],
                 issuerLayer: WEBPACK_LAYERS.server,
-                use: {
-                  loader: 'next-flight-loader',
-                },
+                use: [{ loader: 'next-flight-loader' }],
               },
             ]
           : []),
@@ -1847,8 +1854,8 @@ export default async function getBaseWebpackConfig(
           ? [
               {
                 test: nextImageLoaderRegex,
-                loader: 'next-image-loader',
-                issuer: { not: regexLikeCss },
+                use: [{ loader: 'next-image-loader' }],
+                issuer: { not: [regexLikeCss] },
                 dependency: { not: ['url'] },
                 options: {
                   isServer: isNodeServer || isEdgeServer,
@@ -1975,25 +1982,25 @@ export default async function getBaseWebpackConfig(
     plugins: [
       dev && isClient && new ReactRefreshWebpackPlugin(webpack),
       // Makes sure `Buffer` and `process` are polyfilled in client and flight bundles (same behavior as webpack 4)
-      (isClient || isEdgeServer) &&
-        new webpack.ProvidePlugin({
-          // Buffer is used by getInlineScriptSource
-          Buffer: [require.resolve('buffer'), 'Buffer'],
-          // Avoid process being overridden when in web run time
-          ...(isClient && { process: [require.resolve('process')] }),
-        }),
-      new webpack.DefinePlugin(
-        getDefineEnv({
-          dev,
-          config,
-          distDir,
-          isClient,
-          hasRewrites,
-          isNodeServer,
-          isEdgeServer,
-          middlewareMatchers,
-        })
-      ),
+      // (isClient || isEdgeServer) &&
+      //   new webpack.ProvidePlugin({
+      //     // Buffer is used by getInlineScriptSource
+      //     Buffer: [require.resolve('buffer'), 'Buffer'],
+      //     // Avoid process being overridden when in web run time
+      //     ...(isClient && { process: [require.resolve('process')] }),
+      //   }),
+      // new webpack.DefinePlugin(
+      //   getDefineEnv({
+      //     dev,
+      //     config,
+      //     distDir,
+      //     isClient,
+      //     hasRewrites,
+      //     isNodeServer,
+      //     isEdgeServer,
+      //     middlewareMatchers,
+      //   })
+      // ),
       isClient &&
         new ReactLoadablePlugin({
           filename: REACT_LOADABLE_MANIFEST,
@@ -2020,11 +2027,11 @@ export default async function getBaseWebpackConfig(
       // by default due to how Webpack interprets its code. This is a practical
       // solution that requires the user to opt into importing specific locales.
       // https://github.com/jmblog/how-to-optimize-momentjs-with-webpack
-      config.excludeDefaultMomentLocales &&
-        new webpack.IgnorePlugin({
-          resourceRegExp: /^\.\/locale$/,
-          contextRegExp: /moment$/,
-        }),
+      // config.excludeDefaultMomentLocales &&
+      //   new webpack.IgnorePlugin({
+      //     resourceRegExp: /^\.\/locale$/,
+      //     contextRegExp: /moment$/,
+      //   }),
       ...(dev
         ? (() => {
             // Even though require.cache is server only we have to clear assets from both compilations
@@ -2038,18 +2045,18 @@ export default async function getBaseWebpackConfig(
               }),
             ]
 
-            if (isClient || isEdgeServer) {
-              devPlugins.push(new webpack.HotModuleReplacementPlugin())
-            }
+            // if (isClient || isEdgeServer) {
+            //   devPlugins.push(new webpack.HotModuleReplacementPlugin())
+            // }
 
             return devPlugins
           })()
         : []),
-      !dev &&
-        new webpack.IgnorePlugin({
-          resourceRegExp: /react-is/,
-          contextRegExp: /next[\\/]dist[\\/]/,
-        }),
+      // !dev &&
+      //   new webpack.IgnorePlugin({
+      //     resourceRegExp: /react-is/,
+      //     contextRegExp: /next[\\/]dist[\\/]/,
+      //   }),
       (isNodeServer || isEdgeServer) &&
         new PagesManifestPlugin({
           dev,
@@ -2072,21 +2079,21 @@ export default async function getBaseWebpackConfig(
           exportRuntime: true,
           appDirEnabled: hasAppDir,
         }),
-      new ProfilingPlugin({ runWebpackSpan }),
-      config.optimizeFonts &&
-        !dev &&
-        isNodeServer &&
-        (function () {
-          const { FontStylesheetGatheringPlugin } =
-            require('./webpack/plugins/font-stylesheet-gathering-plugin') as {
-              FontStylesheetGatheringPlugin: typeof import('./webpack/plugins/font-stylesheet-gathering-plugin').FontStylesheetGatheringPlugin
-            }
-          return new FontStylesheetGatheringPlugin({
-            adjustFontFallbacks: config.experimental.adjustFontFallbacks,
-            adjustFontFallbacksWithSizeAdjust:
-              config.experimental.adjustFontFallbacksWithSizeAdjust,
-          })
-        })(),
+      // new ProfilingPlugin({ runWebpackSpan }),
+      // config.optimizeFonts &&
+      //   !dev &&
+      //   isNodeServer &&
+      //   (function () {
+      //     const { FontStylesheetGatheringPlugin } =
+      //       require('./webpack/plugins/font-stylesheet-gathering-plugin') as {
+      //         FontStylesheetGatheringPlugin: typeof import('./webpack/plugins/font-stylesheet-gathering-plugin').FontStylesheetGatheringPlugin
+      //       }
+      //     return new FontStylesheetGatheringPlugin({
+      //       adjustFontFallbacks: config.experimental.adjustFontFallbacks,
+      //       adjustFontFallbacksWithSizeAdjust:
+      //         config.experimental.adjustFontFallbacksWithSizeAdjust,
+      //     })
+      //   })(),
       new WellKnownErrorsPlugin(),
       isClient &&
         new CopyFilePlugin({
@@ -2186,13 +2193,13 @@ export default async function getBaseWebpackConfig(
   if (isEdgeServer) {
     webpack5Config.module?.rules?.unshift({
       test: /\.wasm$/,
-      loader: 'next-middleware-wasm-loader',
+      use: [{ loader: 'next-middleware-wasm-loader' }],
       type: 'javascript/auto',
       resourceQuery: /module/i,
     })
     webpack5Config.module?.rules?.unshift({
       dependency: 'url',
-      loader: 'next-middleware-asset-loader',
+      use: [{ loader: 'next-middleware-asset-loader' }],
       type: 'javascript/auto',
       layer: WEBPACK_LAYERS.edgeAsset,
     })

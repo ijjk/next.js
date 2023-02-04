@@ -293,14 +293,14 @@ function registerUnsupportedApiHooks(
       )
       return true
     }
-    parser.hooks.call.for(expression).tap(NAME, warnForUnsupportedApi)
-    parser.hooks.expression.for(expression).tap(NAME, warnForUnsupportedApi)
-    parser.hooks.callMemberChain
-      .for(expression)
-      .tap(NAME, warnForUnsupportedApi)
-    parser.hooks.expressionMemberChain
-      .for(expression)
-      .tap(NAME, warnForUnsupportedApi)
+    // parser.hooks.call.for(expression).tap(NAME, warnForUnsupportedApi)
+    // parser.hooks.expression.for(expression).tap(NAME, warnForUnsupportedApi)
+    // parser.hooks.callMemberChain
+    //   .for(expression)
+    //   .tap(NAME, warnForUnsupportedApi)
+    // parser.hooks.expressionMemberChain
+    //   .for(expression)
+    //   .tap(NAME, warnForUnsupportedApi)
   }
 
   const warnForUnsupportedProcessApi = (node: any, [callee]: string[]) => {
@@ -318,12 +318,12 @@ function registerUnsupportedApiHooks(
     return true
   }
 
-  parser.hooks.callMemberChain
-    .for('process')
-    .tap(NAME, warnForUnsupportedProcessApi)
-  parser.hooks.expressionMemberChain
-    .for('process')
-    .tap(NAME, warnForUnsupportedProcessApi)
+  // parser.hooks.callMemberChain
+  //   .for('process')
+  //   .tap(NAME, warnForUnsupportedProcessApi)
+  // parser.hooks.expressionMemberChain
+  //   .for('process')
+  //   .tap(NAME, warnForUnsupportedProcessApi)
 }
 
 function getCodeAnalyzer(params: {

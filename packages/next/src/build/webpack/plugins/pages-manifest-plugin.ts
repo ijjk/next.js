@@ -122,7 +122,7 @@ export default class PagesManifestPlugin
   }
 
   apply(compiler: webpack.Compiler): void {
-    compiler.hooks.make.tap('NextJsPagesManifest', (compilation) => {
+    compiler.hooks.compilation.tap('NextJsPagesManifest', (compilation) => {
       compilation.hooks.processAssets.tap(
         {
           name: 'NextJsPagesManifest',
