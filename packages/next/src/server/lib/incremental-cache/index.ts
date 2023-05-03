@@ -100,11 +100,18 @@ export class IncrementalCache {
     fetchCacheKeyPrefix?: string
     CurCacheHandler?: typeof CacheHandler
   }) {
+    const debug = !!process.env.NEXT_PRIVATE_DEBUG_CACHE
     if (!CurCacheHandler) {
       if (fs && serverDistDir) {
+        if (debug) {
+          console.log('using filesystem cache')
+        }
         CurCacheHandler = FileSystemCache
       }
       if (minimalMode && fetchCache) {
+        if (debug) {
+          console.log('using fetch-cache')
+        }
         CurCacheHandler = FetchCache
       }
     }
