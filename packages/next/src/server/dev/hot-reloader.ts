@@ -1408,10 +1408,12 @@ export default class HotReloader {
     clientOnly,
     appPaths,
     match,
+    isApp,
   }: {
     page: string
     clientOnly: boolean
     appPaths?: string[] | null
+    isApp?: boolean
     match?: RouteMatch
   }): Promise<void> {
     // Make sure we don't re-build or dispose prebuilt pages
@@ -1429,6 +1431,7 @@ export default class HotReloader {
       clientOnly,
       appPaths,
       match,
+      isApp,
     }) as any
   }
 }
