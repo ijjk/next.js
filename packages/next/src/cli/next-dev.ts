@@ -231,53 +231,10 @@ const nextDev: CliCommand = async (argv) => {
   const experimentalTurbo = !!process.env.EXPERIMENTAL_TURBOPACK
 
   if (experimentalTurbo) {
-    const { loadBindings } =
-      require('../build/swc') as typeof import('../build/swc')
-
     resetEnv()
-    let bindings = await loadBindings()
+  }
 
-    const config = await loadConfig(
-      PHASE_DEVELOPMENT_SERVER,
-      dir,
-      undefined,
-      undefined,
-      true
-    )
-
-    // Just testing code here:
-
-    const project = await bindings.turbo.createProject({
-      projectPath: dir,
-      rootPath: dir,
-      nextConfig: config,
-      watch: true,
-    })
-    const iter = project.entrypointsSubscribe()
-
-    try {
-      for await (const entrypoints of iter) {
-        for (const [pathname, route] of entrypoints.routes) {
-          switch (route.type) {
-            case 'page': {
-              Log.info(`writing ${pathname} to disk`)
-              const written = await route.htmlEndpoint.writeToDisk()
-              Log.info(written)
-              break
-            }
-            default:
-              Log.info(`skipping ${pathname} (${route.type})`)
-              break
-          }
-        }
-      }
-    } catch (e) {
-      console.error(e)
-    }
-
-    Log.error('Not supported yet')
-    process.exit(1)
-  } else if (process.env.TURBOPACK) {
+  if (process.env.TURBOPACK) {
     isTurboSession = true
 
     const { validateTurboNextConfig } =
