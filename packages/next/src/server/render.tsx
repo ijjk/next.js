@@ -521,7 +521,6 @@ export async function renderToHTMLImpl(
   // every request
   if (isAutoExport && !dev && isExperimentalCompile) {
     res.setHeader('Cache-Control', formatRevalidate(false))
-    isAutoExport = false
   }
 
   if (hasPageGetInitialProps && isSSG) {
@@ -649,8 +648,7 @@ export async function renderToHTMLImpl(
   const routerIsReady = !!(
     getServerSideProps ||
     hasPageGetInitialProps ||
-    (!defaultAppGetInitialProps && !isSSG) ||
-    isExperimentalCompile
+    (!defaultAppGetInitialProps && !isSSG)
   )
   const router = new ServerRouter(
     pathname,
