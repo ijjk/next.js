@@ -1051,8 +1051,8 @@ export default async function getBaseWebpackConfig(
             cacheGroups: {
               nextRuntime: nextRuntimeCacheGroup,
               framework: frameworkCacheGroup,
-              lib: libCacheGroup,
             },
+            chunks: 'all',
             minChunks: 2,
           }
         }
