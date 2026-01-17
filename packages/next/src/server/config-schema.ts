@@ -129,6 +129,7 @@ const zTurbopackCondition: zod.ZodType<TurbopackRuleCondition> = z.union([
   z.strictObject({
     path: z.union([z.string(), z.instanceof(RegExp)]).optional(),
     content: z.instanceof(RegExp).optional(),
+    query: z.union([z.string(), z.instanceof(RegExp)]).optional(),
   }),
 ])
 
@@ -192,7 +193,6 @@ export const experimentalSchema = {
   memoryBasedWorkersCount: z.boolean().optional(),
   craCompat: z.boolean().optional(),
   caseSensitiveRoutes: z.boolean().optional(),
-  cdnCacheControlHeader: z.string().optional(),
   clientParamParsingOrigins: z.array(z.string()).optional(),
   dynamicOnHover: z.boolean().optional(),
   disableOptimizedLoading: z.boolean().optional(),
@@ -308,7 +308,6 @@ export const experimentalSchema = {
   turbopackClientSideNestedAsyncChunking: z.boolean().optional(),
   turbopackServerSideNestedAsyncChunking: z.boolean().optional(),
   turbopackImportTypeBytes: z.boolean().optional(),
-  turbopackUseSystemTlsCerts: z.boolean().optional(),
   turbopackUseBuiltinBabel: z.boolean().optional(),
   turbopackUseBuiltinSass: z.boolean().optional(),
   turbopackModuleIds: z.enum(['named', 'deterministic']).optional(),
@@ -342,7 +341,9 @@ export const experimentalSchema = {
   browserDebugInfoInTerminal: z
     .union([
       z.boolean(),
+      z.enum(['error', 'warn', 'verbose']),
       z.object({
+        level: z.enum(['error', 'warn', 'verbose']).optional(),
         depthLimit: z.number().int().positive().optional(),
         edgeLimit: z.number().int().positive().optional(),
         showSourceLocation: z.boolean().optional(),
