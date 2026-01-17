@@ -14,8 +14,8 @@ currently being supported with security updates.
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+The Next.js team and community take all security vulnerabilities seriously.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+To report a security vulnerability, please use the [GitHub private vulnerability reporting feature](https://github.com/vercel/next.js/security/advisories/new).
+
+You can expect a response within 48 hours. We appreciate your efforts to responsibly disclose your findings, and will make every effort to acknowledge your contributions.
