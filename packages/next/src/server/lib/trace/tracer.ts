@@ -227,14 +227,26 @@ class NextTracerImpl implements NextTracer {
   public withPropagatedContext<T, C>(
     carrier: C,
     fn: () => T,
-    getter?: TextMapGetter<C>
+    getter?: TextMapGetter<C>,
+    force = false
   ): T {
     const activeContext = context.active()
-    if (trace.getSpanContext(activeContext)) {
+    if (!force && trace.getSpanContext(activeContext)) {
       // Active span is already set, too late to propagate.
       return fn()
     }
-    const remoteContext = propagation.extract(activeContext, carrier, getter)
+    const extractionContext = force ? ROOT_CONTEXT : activeContext
+    const remoteContext = propagation.extract(
+      extractionContext,
+      carrier,
+      getter
+    )
+
+    if (force && !trace.getSpanContext(remoteContext)) {
+      // If nothing was extracted, preserve the existing active context.
+      return fn()
+    }
+
     return context.with(remoteContext, fn)
   }
 
